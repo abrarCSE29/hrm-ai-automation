@@ -1,0 +1,2 @@
+{"name": "leave_balance", "input": "What is my leave balance?", "expected_contains": "balance"}
+{"name": "leave_request_approval", "input": "Submit a leave request for 3 days", "expected_contains": "approval"}
