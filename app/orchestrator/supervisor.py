@@ -4,18 +4,17 @@ from agno.team import Team, TeamMode
 
 from app.agents.factory import build_all_specialists
 from app.core.config import settings
-from app.core.models import get_chat_model
-from app.core.observability import trace_run
+from app.core.models import _patch_model_for_tracing, get_chat_model
+from app.core.observability import is_tracing_enabled, trace_run
 
 
 def build_supervisor(env: str | None = None, model=None):
-    supervisor_model = model if model is not None else get_chat_model(env)
-    specialists = build_all_specialists(env, model=model)
-    team = Team(
+    model = model if model is not None else get_chat_model(env)
+    return Team(
         name="hrm_supervisor",
         mode=TeamMode.route,
-        model=supervisor_model,
-        members=specialists,
+        model=model,
+        members=build_all_specialists(env, model=model),
         instructions=[
             (
                 "You are an HR (Human Resources) assistant for the HRM automation system. "
@@ -23,9 +22,9 @@ def build_supervisor(env: str | None = None, model=None):
             ),
             "Route the user request to the most appropriate specialist agent.",
             "For leave balance or leave requests, route to leave_agent.",
+            "For salary, accounts, or pending salary questions, route to account_agent.",
         ],
     )
-    return team
 
 
 def run_chat(
@@ -37,26 +36,9 @@ def run_chat(
     trace_id: str | None = None,
 ) -> str:
     env = env or settings.ENVIRONMENT
-    if model is not None:
-        try:
-            from app.core.observability import is_tracing_enabled
-
-            if is_tracing_enabled():
-                from app.core.models import _patch_model_for_tracing
-
-                model = _patch_model_for_tracing(model)
-        except Exception:  # noqa: BLE001, S110
-            pass
+    if model is not None and is_tracing_enabled():
+        model = _patch_model_for_tracing(model)
     team = build_supervisor(env, model=model)
-
-    from app.core.observability import is_tracing_enabled
-
-    if not is_tracing_enabled():
-        result = team.run(message)
-        content = getattr(result, "content", None)
-        if content is None:
-            content = str(result)
-        return content
 
     with trace_run(
         "hrm_chat_turn",

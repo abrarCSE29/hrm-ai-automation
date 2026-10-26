@@ -2,7 +2,6 @@
 
 import os
 from contextlib import contextmanager
-from typing import Any
 
 from app.core.config import settings
 
@@ -31,31 +30,18 @@ def is_tracing_enabled() -> bool:
 
 
 @contextmanager
-def trace_run(name: str, run_type: str = "chain", *, inputs: dict | None = None, metadata: dict | None = None, tags=None, project_name: str | None = None):
+def trace_run(name: str, run_type: str = "chain", *, inputs: dict | None = None, metadata: dict | None = None, tags=None):
     if not is_tracing_enabled():
         yield None
         return
     from langsmith.run_helpers import trace
 
-    project = project_name or settings.LANGSMITH_PROJECT
     with trace(
         name,
         run_type=run_type,
         inputs=inputs or {},
         metadata=metadata or {},
         tags=tags or [],
-        project_name=project,
+        project_name=settings.LANGSMITH_PROJECT,
     ) as run:
         yield run
-
-
-def record_usage(run: Any, usage: dict, model_name: str, provider: str) -> None:
-    if run is None:
-        return
-    try:
-        run.extra = run.extra or {}
-        run.extra.setdefault("usage_metadata", usage)
-        run.metadata = run.metadata or {}
-        run.metadata.update({"ls_provider": provider, "ls_model_name": model_name})
-    except Exception:  # noqa: BLE001, S110
-        pass

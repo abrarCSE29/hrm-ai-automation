@@ -63,18 +63,6 @@ def get_chat_model(env: str | None = None, *, fallback: bool = False):
     return model
 
 
-def get_model_candidates(env: str | None = None):
-    """Primary then fallback (if configured) model instances."""
-    env = (env or settings.ENVIRONMENT or "dev").lower()
-    if env == "prod":
-        env = "production"
-    cfg = get_model_pair_config(env)
-    out = [get_chat_model(env, fallback=False)]
-    if cfg.get("fallback"):
-        out.append(get_chat_model(env, fallback=True))
-    return out
-
-
 def run_with_fallback(operation: Callable, env: str | None = None):
     """Run ``operation(model)`` with primary, retrying once on the fallback.
 
@@ -95,12 +83,6 @@ def run_with_fallback(operation: Callable, env: str | None = None):
         if fallback_model is primary:
             raise
         return operation(fallback_model)
-
-
-def provider_class_for(env: str) -> type:
-    """Helper used by tests to assert the factory's provider class."""
-    model = get_chat_model(env, fallback=False)
-    return type(model)
 
 
 def _serialize_messages(messages) -> list:

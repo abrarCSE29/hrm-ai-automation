@@ -17,6 +17,8 @@ def execute_tool(spec: ToolSpec, args: dict, agent_name: str = "") -> dict:
         trace_id = get_trace_id() or uuid.uuid4().hex
         conversation_id = get_conversation_id()
         user_input = get_user_input()
+        print(spec)
+        print(args)
         try:
             validated = spec.input_schema(**(args or {}))
             validated_args = validated.model_dump()
@@ -25,6 +27,7 @@ def execute_tool(spec: ToolSpec, args: dict, agent_name: str = "") -> dict:
 
         engine = PolicyEngine(default_rules())
         decision = engine.validate(spec.name, validated_args)
+        print(decision)
         policy_decision = "allowed" if decision.allowed else "denied"
 
         if not decision.allowed:

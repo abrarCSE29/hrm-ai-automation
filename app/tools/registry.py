@@ -17,6 +17,18 @@ class ToolRegistry:
 
     def discover(self, package_name: str = "app.tools") -> None:
         package = importlib.import_module(package_name)
+        # A ToolSpec object can surface twice: once from the module that defines
+        # it and once from an aggregating ``<domain>/tools.py`` that re-exports
+        # it. That is one tool, not a duplicate. Only two *distinct* specs
+        # sharing a name are an error.
+        seen: set[int] = set()
+
+        def register_once(spec: ToolSpec) -> None:
+            if id(spec) in seen:
+                return
+            seen.add(id(spec))
+            self.register(spec)
+
         for module_info in pkgutil.walk_packages(package.__path__, prefix=package_name + "."):
             # skip base/registry modules
             if module_info.name.endswith(("base", "registry")):
@@ -28,19 +40,16 @@ class ToolRegistry:
             tools = getattr(module, "TOOLS", None)
             if tools:
                 for spec in tools:
-                    self.register(spec)
+                    register_once(spec)
             # also support decorator-registered specs
             for attr in vars(module).values():
                 if isinstance(attr, ToolSpec):
-                    self.register(attr)
+                    register_once(attr)
 
     def get(self, name: str) -> ToolSpec:
         if name not in self._tools:
             raise KeyError(f"Unknown tool: {name}")
         return self._tools[name]
-
-    def all(self) -> list[ToolSpec]:
-        return list(self._tools.values())
 
     def names(self) -> list[str]:
         return list(self._tools.keys())

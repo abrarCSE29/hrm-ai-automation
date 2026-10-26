@@ -1,10 +1,11 @@
 """Leave management tools (framework-agnostic)."""
 
-from datetime import date
 from typing import Literal
 
 from pydantic import BaseModel, Field
 
+from app.db.models import Approval
+from app.db.session import SessionLocal
 from app.tools.base import ToolSpec
 
 
@@ -63,6 +64,42 @@ def submit_leave_request(
     }
 
 
+class PendingLeaveRequestsInput(BaseModel):
+    employee_id: str = Field("", description="Optional employee identifier filter")
+
+
+class PendingLeaveRequestsOutput(BaseModel):
+    requests: list[dict]
+    count: int
+
+
+def get_pending_leave_requests(employee_id: str = "") -> dict:
+    """Return pending leave requests (awaiting approval)."""
+    db = SessionLocal()
+    try:
+        rows = db.query(Approval).filter(Approval.tool_name == "submit_leave_request", Approval.status == "pending").all()
+        requests = []
+        for r in rows:
+            args = r.args or {}
+            if employee_id and args.get("employee_id") != employee_id:
+                continue
+            requests.append(
+                {
+                    "approval_id": r.approval_id,
+                    "employee_id": args.get("employee_id"),
+                    "leave_type": args.get("leave_type"),
+                    "start_date": args.get("start_date"),
+                    "end_date": args.get("end_date"),
+                    "days": args.get("days"),
+                    "reason": args.get("reason"),
+                    "status": r.status,
+                }
+            )
+        return {"requests": requests, "count": len(requests)}
+    finally:
+        db.close()
+
+
 TOOLS = [
     ToolSpec(
         name="get_leave_balance",
@@ -86,6 +123,15 @@ TOOLS = [
         sensitive_fields=["employee_id"],
         domain="leave",
     ),
+    ToolSpec(
+        name="get_pending_leave_requests",
+        description="Get pending leave requests awaiting approval.",
+        func=get_pending_leave_requests,
+        input_schema=PendingLeaveRequestsInput,
+        output_schema=PendingLeaveRequestsOutput,
+        requires_approval=False,
+        risk_level="low",
+        sensitive_fields=["employee_id"],
+        domain="leave",
+    ),
 ]
-# keep date import usable
-_ = date

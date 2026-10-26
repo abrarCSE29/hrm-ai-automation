@@ -23,7 +23,3 @@ class _TraceFilter(logging.Filter):
         if not hasattr(record, "trace_id"):
             record.trace_id = "-"
         return True
-
-
-def get_logger(name: str) -> logging.Logger:
-    return logging.getLogger(name)

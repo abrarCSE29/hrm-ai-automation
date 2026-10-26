@@ -8,7 +8,6 @@ class AgentSpec:
     name: str
     role: str
     tools: list[str] = field(default_factory=list)
-    model: str | None = None  # None => use environment default via factory
 
 
 AGENT_REGISTRY: list[AgentSpec] = [
@@ -20,7 +19,16 @@ AGENT_REGISTRY: list[AgentSpec] = [
             "When asked who you are, say you are an HR assistant. "
             "When a tool returns pending_approval, tell the user approval is required."
         ),
-        tools=["get_leave_balance", "submit_leave_request", "get_employee_profile"],
-        model=None,
+        tools=["get_leave_balance", "submit_leave_request", "get_pending_leave_requests", "get_employee_profile"],
+    ),
+    AgentSpec(
+        name="account_agent",
+        role=(
+            "You are an HR accounts assistant specializing in salary. Use the available tools to "
+            "access employee salaries, request salary changes, and report pending salary. "
+            "When asked who you are, say you are an HR assistant. "
+            "When a tool returns pending_approval, tell the user approval is required."
+        ),
+        tools=["get_salary", "request_salary_change", "get_pending_salary", "get_employee_profile"],
     ),
 ]

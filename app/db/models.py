@@ -2,7 +2,7 @@
 
 from datetime import datetime
 
-from sqlalchemy import JSON, DateTime, Integer, String, Text, func
+from sqlalchemy import JSON, DateTime, Float, Integer, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
@@ -62,3 +62,43 @@ class AuditLog(Base):
     policy_decision: Mapped[str] = mapped_column(String(32), default="")
     approval_decision: Mapped[str] = mapped_column(String(32), default="")
     final_outcome: Mapped[str] = mapped_column(String(64), default="")
+
+
+class Salary(Base):
+    __tablename__ = "salaries"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    employee_id: Mapped[str] = mapped_column(String(64), unique=True, index=True)
+    amount: Mapped[float] = mapped_column(Float, default=0.0)
+    currency: Mapped[str] = mapped_column(String(16), default="BDT")
+    effective_date: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+
+class SalaryChangeRequest(Base):
+    __tablename__ = "salary_change_requests"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    request_id: Mapped[str] = mapped_column(String(64), unique=True, index=True)
+    employee_id: Mapped[str] = mapped_column(String(64), index=True)
+    current_salary: Mapped[float] = mapped_column(Float, default=0.0)
+    requested_salary: Mapped[float] = mapped_column(Float, default=0.0)
+    reason: Mapped[str] = mapped_column(Text, default="")
+    status: Mapped[str] = mapped_column(String(32), default="pending")
+    requested_by: Mapped[str] = mapped_column(String(128), default="")
+    trace_id: Mapped[str] = mapped_column(String(64), default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    decided_by: Mapped[str | None] = mapped_column(String(128), nullable=True)
+
+
+class PendingSalary(Base):
+    __tablename__ = "pending_salaries"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    employee_id: Mapped[str] = mapped_column(String(64), index=True)
+    amount: Mapped[float] = mapped_column(Float, default=0.0)
+    description: Mapped[str] = mapped_column(Text, default="")
+    due_date: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    status: Mapped[str] = mapped_column(String(32), default="pending")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

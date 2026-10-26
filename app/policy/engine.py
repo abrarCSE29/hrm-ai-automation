@@ -24,6 +24,9 @@ class PolicyEngine:
         reasons = []
         for rule in self.rules:
             reason = rule.evaluate(action, args or {})
+            print(reason)
             if reason:
                 reasons.append(reason)
+                
+        print(len(reasons))
         return Decision(allowed=len(reasons) == 0, reasons=reasons)
